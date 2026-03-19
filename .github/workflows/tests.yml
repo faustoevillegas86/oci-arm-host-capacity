@@ -7,7 +7,7 @@ on:
   pull_request:
     branches:
       - main
-
+  workflow_dispatch:        # ← habilita el botón manual
 #  schedule:
 #    - cron: '*/5 * * * *'
 
