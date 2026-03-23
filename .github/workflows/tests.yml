@@ -11,6 +11,10 @@ on:
   schedule:
     - cron: '*/5 * * * *' # Runs every 5 minutes
 
+# FIX: suprimir warning de Node.js 20 deprecated hasta que las actions soporten Node.js 22
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: true
+
 jobs:
   tests:
     runs-on: ubuntu-latest
@@ -64,7 +68,7 @@ jobs:
           OCI_SHAPE: ${{ secrets.OCI_SHAPE }}
           OCI_MAX_INSTANCES: ${{ secrets.OCI_MAX_INSTANCES }}
           OCI_SSH_PUBLIC_KEY: ${{ secrets.OCI_SSH_PUBLIC_KEY }}
-          # FIX: nueva variable para controlar si se asigna IP publica (true/false)
+          # Nueva variable para controlar si se asigna IP publica (true/false)
           OCI_ASSIGN_PUBLIC_IP: ${{ secrets.OCI_ASSIGN_PUBLIC_IP }}
           TELEGRAM_BOT_API_KEY: ${{ secrets.TELEGRAM_BOT_API_KEY }}
           TELEGRAM_USER_ID: ${{ secrets.TELEGRAM_USER_ID }}
