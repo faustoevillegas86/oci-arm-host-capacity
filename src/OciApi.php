@@ -55,6 +55,9 @@ class OciApi
 
         $displayName = 'instance-' . date('Ymd-Hi');
 
+        // FIX: assignPublicIp is now configurable via OCI_ASSIGN_PUBLIC_IP env var (default: false)
+        $assignPublicIp = getenv('OCI_ASSIGN_PUBLIC_IP') === 'true' ? 'true' : 'false';
+
         $body = <<<EOD
 {
     "metadata": {
@@ -66,7 +69,7 @@ class OciApi
     "availabilityDomain": "$availabilityDomain",
     "sourceDetails": {$config->getSourceDetails()},
     "createVnicDetails": {
-        "assignPublicIp": false,
+        "assignPublicIp": $assignPublicIp,
         "subnetId": "{$config->subnetId}",
         "assignPrivateDnsRecord": true
     },
@@ -96,7 +99,6 @@ class OciApi
 EOD;
 
         $baseUrl = "{$this->getBaseApiUrl($config)}/instances/";
-
         try {
             return $this->call($config, $baseUrl, 'POST', $body);
         } catch(ApiCallException $e) {
@@ -128,14 +130,13 @@ EOD;
     {
         $baseUrl = "{$this->getBaseApiUrl($config)}/instances/";
         $params = ['compartmentId' => $config->tenancyId];
-
         return $this->call($config, $baseUrl, 'GET', null, $params);
     }
 
     public function checkExistingInstances(OciConfig $config, array $listResponse, string $shape, int $maxRunningInstancesOfThatShape): string
     {
         $this->existingInstances = array_filter($listResponse, function ($instance) use ($shape) {
-//        $unacceptableStates = ['RUNNING', 'PROVISIONING', 'STARTING', 'STOPPED', 'STOPPING', 'TERMINATING'];
+            // $unacceptableStates = ['RUNNING', 'PROVISIONING', 'STARTING', 'STOPPED', 'STOPPING', 'TERMINATING'];
             $acceptableStates = ['TERMINATED'];
             return !in_array($instance['lifecycleState'], $acceptableStates) && $instance['shape'] === $shape;
         });
@@ -177,7 +178,6 @@ EOD;
         if (!$data) {
             $baseUrl = "{$this->getBaseApiUrl($config, 'identity')}/availabilityDomains/";
             $params = ['compartmentId' => $config->tenancyId];
-
             $data = $this->call($config, $baseUrl, 'GET', null, $params);
             if (getenv('CACHE_AVAILABILITY_DOMAINS') && isset($this->cache)) {
                 $this->cache->add($data, 'getAvailabilityDomains');
@@ -221,13 +221,11 @@ EOD;
         string $method = 'GET',
         string $body = null,
         array $params = []
-    )
-    {
+    ) {
         $paramsString = '';
         if ($params) {
             $paramsString = '?' . http_build_query($params);
         }
-
         $url = "$baseUrl$paramsString";
 
         $signer = new Signer(
@@ -240,14 +238,14 @@ EOD;
         $headers = $signer->getHeaders($url, $method, $body, 'application/json');
 
         $curlOptions = [
-            CURLOPT_URL => $url,
+            CURLOPT_URL            => $url,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_MAXREDIRS => 1,
-            CURLOPT_TIMEOUT => 10,
+            CURLOPT_MAXREDIRS      => 1,
+            CURLOPT_TIMEOUT        => 10,
             CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => $method,
-            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST  => $method,
+            CURLOPT_HTTPHEADER     => $headers,
         ];
 
         if ($body) {
