@@ -33,7 +33,7 @@ class OciConfig
      * @param string $tenancyId
      * @param string $keyFingerPrint
      * @param string $privateKeyFilename
-     * @param string|array|null $availabilityDomains
+     * @param array|string|null $availabilityDomains
      * @param string $subnetId
      * @param string $imageId
      * @param int $ocups
@@ -62,7 +62,7 @@ class OciConfig
         $this->imageId = $imageId;
         $this->ocpus = $ocups;
         $this->memoryInGBs = $memoryInGBs;
-        $this->imageId = $imageId;
+        // FIX: eliminada asignacion duplicada de $this->imageId que existia aqui
     }
 
     /**
@@ -85,7 +85,7 @@ class OciConfig
 
         $sourceDetails = [
             'sourceType' => 'image',
-            'imageId' => $this->imageId,
+            'imageId'    => $this->imageId,
         ];
 
         if (!empty($this->bootVolumeId) && !empty($this->bootVolumeSizeInGBs)) {
@@ -101,9 +101,8 @@ class OciConfig
             if (!is_string($this->availabilityDomains) || empty($this->availabilityDomains)) {
                 throw new AvailabilityDomainRequiredException('OCI_AVAILABILITY_DOMAIN must be specified as string if using OCI_BOOT_VOLUME_ID');
             }
-
             $sourceDetails = [
-                'sourceType' => 'bootVolume',
+                'sourceType'   => 'bootVolume',
                 'bootVolumeId' => $this->bootVolumeId,
             ];
         }
