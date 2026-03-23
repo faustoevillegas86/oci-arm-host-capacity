@@ -49,9 +49,11 @@ $api = new OciApi();
 if (getenv('CACHE_AVAILABILITY_DOMAINS')) {
     $api->setCache(new FileCache($config));
 }
+
 if (getenv('TOO_MANY_REQUESTS_TIME_WAIT')) {
     $api->setWaiter(new TooManyRequestsWaiter((int) getenv('TOO_MANY_REQUESTS_TIME_WAIT')));
 }
+
 $notifier = (function (): \Hitrov\Interfaces\NotifierInterface {
     /*
      * if you have own https://core.telegram.org/bots
@@ -65,14 +67,12 @@ $notifier = (function (): \Hitrov\Interfaces\NotifierInterface {
 })();
 
 $shape = getenv('OCI_SHAPE');
-
 $maxRunningInstancesOfThatShape = 1;
 if (getenv('OCI_MAX_INSTANCES') !== false) {
     $maxRunningInstancesOfThatShape = (int) getenv('OCI_MAX_INSTANCES');
 }
 
 $instances = $api->getInstances($config);
-
 $existingInstances = $api->checkExistingInstances($config, $instances, $shape, $maxRunningInstancesOfThatShape);
 if ($existingInstances) {
     echo "$existingInstances\n";
@@ -96,9 +96,19 @@ foreach ($availabilityDomains as $availabilityDomainEntity) {
     } catch(ApiCallException $e) {
         $message = $e->getMessage();
         echo "$message\n";
-//            if ($notifier->isSupported()) {
-//                $notifier->notify($message);
-//            }
+
+        // FIX: notificacion de errores habilitada (solo para errores que NO sean Out of host capacity,
+        // para no generar spam de notificaciones durante el proceso de reintento normal)
+        if ($notifier->isSupported()) {
+            $isOutOfCapacity = (
+                $e->getCode() === 500 &&
+                strpos($message, 'InternalError') !== false &&
+                strpos($message, 'Out of host capacity') !== false
+            );
+            if (!$isOutOfCapacity) {
+                $notifier->notify($message);
+            }
+        }
 
         if (
             $e->getCode() === 500 &&
@@ -120,6 +130,5 @@ foreach ($availabilityDomains as $availabilityDomainEntity) {
     if ($notifier->isSupported()) {
         $notifier->notify($message);
     }
-
     return;
 }
